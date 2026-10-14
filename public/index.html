@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PULSE // Vinyl Audiophile Player</title>
+  <meta name="description" content="Spotify-grade open-source streaming music player with spinning vinyl disc, real-time synchronized LRCLIB lyrics, queue, and custom playlists.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css?v=5">
+</head>
+<body class="theme-dark">
+
+  <!-- Ambient Dynamic Aura Background -->
+  <div class="ambient-glow" id="ambientGlow"></div>
+  <canvas id="ambientCanvas" class="ambient-canvas"></canvas>
+
+  <div class="app-layout">
+    <!-- Top Bar: Logo + Big Pill Search Box -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-logo">
+          <span class="pulse-bar b1"></span>
+          <span class="pulse-bar b2"></span>
+          <span class="pulse-bar b3"></span>
+          <span class="pulse-bar b4"></span>
+        </div>
+        <div class="brand-text">
+          <span class="brand-name">PULSE</span>
+          <span class="brand-badge">VINYL // HQ STREAM</span>
+        </div>
+      </div>
+
+      <!-- Centered Big Pill Search Box -->
+      <div class="search-container">
+        <div class="search-wrapper">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+          <input type="text" id="searchInput" placeholder="Search songs, artists, albums (Press '/' or Ctrl+K)..." autocomplete="off" spellcheck="false">
+          <button id="searchClearBtn" class="search-clear-btn" title="Clear">✕</button>
+          <div class="search-shortcut"><kbd>/</kbd></div>
+        </div>
+      </div>
+
+      <!-- Top Right Controls: EQ & Fullscreen -->
+      <div class="header-actions">
+        <button id="btnEqToggle" class="btn-pill" title="Sound Equalizer / Bass Boost">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="4" y1="21" x2="4" y2="14"></line>
+            <line x1="4" y1="10" x2="4" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12" y2="3"></line>
+            <line x1="20" y1="21" x2="20" y2="16"></line>
+            <line x1="20" y1="12" x2="20" y2="3"></line>
+          </svg>
+          <span>EQ FX</span>
+        </button>
+
+        <button id="btnFullscreen" class="btn-icon" title="Toggle Fullscreen (F)">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Stage Grid (3 Columns: Disc | Middle Lyrics/Queue | Playlist Area) -->
+    <main class="stage-grid">
+      
+      <!-- COLUMN 1: Rotating Vinyl Disk + Toggle Lyrics/Queue + Song Description -->
+      <section class="stage-col col-disk">
+        <div class="disk-stage-wrapper">
+          
+          <div class="vinyl-outer-wrapper">
+            <!-- Add to Playlist Button floating by the disc -->
+            <button class="btn-add-playlist-float" id="btnAddToPlaylistDisk" title="Add current track to playlist">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M12 5v14M5 12h14"></path>
+              </svg>
+              <span>+ Playlist</span>
+            </button>
+
+            <!-- Physical Tonearm Stylus -->
+            <div class="tonearm-assembly" id="tonearm">
+              <div class="tonearm-pivot"></div>
+              <div class="tonearm-arm"></div>
+              <div class="tonearm-head"></div>
+            </div>
+
+            <!-- The Spinning Vinyl Record -->
+            <div class="vinyl-disc" id="vinylDisc">
+              <div class="vinyl-groove g1"></div>
+              <div class="vinyl-groove g2"></div>
+              <div class="vinyl-groove g3"></div>
+              <div class="vinyl-groove g4"></div>
+              <div class="vinyl-reflection"></div>
+              
+              <!-- Center Album Cover Label -->
+              <div class="vinyl-label-art">
+                <img id="vinylCoverImg" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23111422'/><circle cx='50' cy='50' r='20' fill='%2300f5d4'/></svg>" alt="Album Cover">
+                <div class="vinyl-center-spindle"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Disc Column Center View Switcher (Lyrics vs Queue Toggle) -->
+        <div class="center-view-switcher">
+          <button id="btnToggleLyrics" class="view-switch-btn active" title="Show Lyrics in middle column">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18V5l12-2v13"></path>
+              <circle cx="6" cy="18" r="3"></circle>
+              <circle cx="18" cy="16" r="3"></circle>
+            </svg>
+            <span>Lyrics</span>
+          </button>
+          <button id="btnToggleQueue" class="view-switch-btn" title="Show Queue in middle column">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="8" y1="6" x2="21" y2="6"></line>
+              <line x1="8" y1="12" x2="21" y2="12"></line>
+              <line x1="8" y1="18" x2="21" y2="18"></line>
+              <line x1="3" y1="6" x2="3.01" y2="6"></line>
+              <line x1="3" y1="12" x2="3.01" y2="12"></line>
+              <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            </svg>
+            <span>Queue (<span id="queueBadgeCountDisk">0</span>)</span>
+          </button>
+        </div>
+
+        <!-- Song Description Block: Name, Artist, Album, Scrubber, Transport -->
+        <div class="song-description-card">
+          <div class="song-main-meta">
+            <h1 id="songTitle" class="song-title">No Track Selected</h1>
+            <h2 id="songArtist" class="song-artist">PULSE Open-Source Audio Engine</h2>
+          </div>
+          <div class="song-tags-row">
+            <span id="songAlbum" class="meta-tag">Album: —</span>
+            <span id="songFormat" class="meta-tag tag-accent">HQ OPUS / WEBM</span>
+          </div>
+
+          <!-- Audiophile Scrub Bar -->
+          <div class="disk-scrubber" id="progressContainer">
+            <div class="scrub-track">
+              <div class="scrub-buffer" id="progressBuffer"></div>
+              <div class="scrub-fill" id="progressFill">
+                <div class="scrub-thumb"></div>
+              </div>
+            </div>
+            <div class="scrub-timing">
+              <span id="timeCurrent">0:00</span>
+              <span id="timeTotal">0:00</span>
+            </div>
+            <div class="scrub-hover-tooltip" id="progressHoverTime">0:00</div>
+          </div>
+
+          <!-- Transport Playback Controls -->
+          <div class="transport-bar">
+            <button id="btnPrev" class="btn-ctrl-sm" title="Previous Song">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                <polygon points="19 20 9 12 19 4 19 20"></polygon>
+                <line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="3"></line>
+              </svg>
+            </button>
+
+            <button id="btnPlay" class="btn-play-hero" title="Play/Pause (Space)">
+              <svg id="iconPlay" viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                <polygon points="6 3 20 12 6 21 6 3"></polygon>
+              </svg>
+              <svg id="iconPause" class="hidden" viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                <rect x="6" y="4" width="4" height="16"></rect>
+                <rect x="14" y="4" width="4" height="16"></rect>
+              </svg>
+              <div class="play-spinner hidden" id="playSpinner"></div>
+            </button>
+
+            <button id="btnNext" class="btn-ctrl-sm" title="Next Song">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                <polygon points="5 4 15 12 5 20 5 4"></polygon>
+                <line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="3"></line>
+              </svg>
+            </button>
+
+            <button id="btnRepeat" class="btn-ctrl-sm" title="Repeat (Off / All / One)">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="17 1 21 5 17 9"></polyline>
+                <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                <polyline points="7 23 3 19 7 15"></polyline>
+                <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+              </svg>
+              <span id="repeatIndicator" class="repeat-num hidden">1</span>
+            </button>
+          </div>
+
+          <!-- Volume & Speed Row -->
+          <div class="sub-controls-row">
+            <button id="btnSpeed" class="btn-speed-badge">1.0x</button>
+            <div class="volume-slider-group">
+              <button id="btnMute" class="btn-ctrl-sm" title="Mute (M)">
+                <svg id="iconVolHigh" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                </svg>
+                <svg id="iconVolMuted" class="hidden" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                  <line x1="23" y1="9" x2="17" y2="15"></line>
+                  <line x1="17" y1="9" x2="23" y2="15"></line>
+                </svg>
+              </button>
+              <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.85" class="volume-slider">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- COLUMN 2 (MIDDLE): Dedicated View for either Lyrics OR Queue (Switchable) -->
+      <section class="stage-col col-middle">
+        
+        <!-- View A: Synchronized Lyrics -->
+        <div class="middle-view active" id="viewLyrics">
+          <div class="col-header">
+            <div class="col-header-title">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 18V5l12-2v13"></path>
+                <circle cx="6" cy="18" r="3"></circle>
+                <circle cx="18" cy="16" r="3"></circle>
+              </svg>
+              <h2>Real-Time Lyrics</h2>
+            </div>
+            <span class="badge" id="lyricsStatusBadge">Synced LRCLIB</span>
+          </div>
+
+          <div class="lyrics-viewport" id="lyricsViewport">
+            <div class="lyrics-placeholder" id="lyricsPlaceholder">
+              <div class="placeholder-icon">🎵</div>
+              <p>Play any song to stream audio and sync live scrolling lyrics.</p>
+            </div>
+            <div class="lyrics-lines" id="lyricsLines"></div>
+          </div>
+        </div>
+
+        <!-- View B: Queue Column -->
+        <div class="middle-view" id="viewQueue">
+          <div class="col-header">
+            <div class="col-header-title">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="8" y1="6" x2="21" y2="6"></line>
+                <line x1="8" y1="12" x2="21" y2="12"></line>
+                <line x1="8" y1="18" x2="21" y2="18"></line>
+                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+              </svg>
+              <h2>Queue</h2>
+            </div>
+            <div class="queue-header-tools">
+              <span class="queue-badge-pill" id="queueBadgeCount">0</span>
+              <button id="btnSaveQueue" class="btn-ghost-sm" title="Save queue as new playlist">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                Save
+              </button>
+              <button id="btnClearQueue" class="btn-ghost-sm btn-ghost-danger" title="Clear upcoming tracks">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6M14 11v6"></path></svg>
+                Clear
+              </button>
+            </div>
+          </div>
+
+          <!-- Queue Source / Context Label -->
+          <div class="queue-context-label" id="queueContextLabel">
+            <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
+            <span id="queueContextText">No queue source</span>
+          </div>
+
+          <!-- NOW PLAYING section -->
+          <div class="queue-section-label">NOW PLAYING</div>
+          <div id="queueNowPlaying" class="queue-now-playing-card">
+            <div class="queue-empty" id="queueNowPlayingEmpty">Nothing playing yet</div>
+          </div>
+
+          <!-- NEXT UP section -->
+          <div class="queue-section-label" id="queueNextLabel" style="margin-top:10px;">NEXT UP <span id="queueNextCount" class="queue-next-count"></span></div>
+          <div class="queue-list-container" id="queueList">
+            <div class="queue-empty" id="queueEmptyMsg">Queue is empty.<br>Play a playlist or add tracks from search!</div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- COLUMN 3 (RIGHT): Current Playlist & Custom Playlists & Search Results -->
+      <section class="stage-col col-playlist">
+        
+        <!-- Search Active Banner (shown only when searching, with "Back to Playlist") -->
+        <div class="search-active-banner hidden" id="searchBanner">
+          <button id="btnBackToPlaylist" class="btn-back-pl">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+            <span>Back to Playlist</span>
+          </button>
+          <div class="search-title-text" id="searchBannerTitle">Search Results</div>
+        </div>
+
+        <!-- Search Filter Chips (visible when searching) -->
+        <div class="search-filter-chips hidden" id="searchFilterChips">
+          <button class="filter-chip active" data-filter="songs">Songs</button>
+          <button class="filter-chip" data-filter="videos">Videos</button>
+          <button class="filter-chip" data-filter="albums">Albums</button>
+          <button class="filter-chip" data-filter="artists">Artists</button>
+          <button class="filter-chip" data-filter="">All</button>
+        </div>
+
+        <!-- Playlist Selector & Creation Controls (hidden when searching) -->
+        <div class="playlist-top-controls" id="playlistTopControls">
+          <div class="playlist-select-wrapper">
+            <span class="playlist-label">PLAYLIST:</span>
+            <select id="playlistSelect" class="playlist-select">
+              <!-- Dynamically populated from localStorage custom playlists -->
+            </select>
+          </div>
+
+          <button id="btnOpenCreatePlaylistModal" class="btn-create-playlist" title="Create a new custom playlist">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span>+ New Playlist</span>
+          </button>
+        </div>
+
+        <!-- Playlist Action Bar: Play Playlist Button & Randomizer/Shuffle Button -->
+        <div class="playlist-meta-bar" id="playlistMetaBar">
+          <div class="playlist-action-btns">
+            <!-- Play Entire Playlist Button -->
+            <button id="btnPlayPlaylist" class="btn-play-playlist" title="Play entire playlist">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                <polygon points="6 3 20 12 6 21 6 3"></polygon>
+              </svg>
+              <span>Play Playlist</span>
+            </button>
+
+            <!-- Randomizer / Shuffle Playlist Button -->
+            <button id="btnShufflePlaylist" class="btn-shuffle-playlist" title="Shuffle play this playlist">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="16 3 21 3 21 8"></polyline>
+                <line x1="4" y1="20" x2="21" y2="3"></line>
+                <polyline points="21 16 21 21 16 21"></polyline>
+                <line x1="15" y1="15" x2="21" y2="21"></line>
+              </svg>
+              <span>Randomize</span>
+            </button>
+          </div>
+
+          <div class="playlist-meta-info">
+            <span id="playlistTrackCount" class="playlist-count">0 tracks</span>
+            <button id="btnDeleteCustomPlaylist" class="btn-delete-pl hidden" title="Delete this custom playlist">Delete Playlist</button>
+          </div>
+        </div>
+
+        <!-- Playlist / Search Tracks List -->
+        <div class="playlist-scroll-area" id="playlistTracksContainer">
+          <!-- Dynamically populated tracks -->
+        </div>
+
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Toast Notification System -->
+  <div class="toast-notification hidden" id="toastNotification">Track added to playlist!</div>
+
+  <!-- MODAL: Add Track to Custom Playlist -->
+  <div class="modal-overlay hidden" id="addToPlaylistModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Add to Playlist</h3>
+        <button id="btnCloseAddToPlaylist" class="modal-close-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-sub">Choose a playlist to save this track:</p>
+        <div class="playlist-target-list" id="playlistTargetList">
+          <!-- Injected dynamically -->
+        </div>
+        <div class="modal-divider">or create new</div>
+        <div class="quick-create-input-group">
+          <input type="text" id="quickNewPlaylistInput" placeholder="New playlist name...">
+          <button id="btnQuickCreateAndAdd" class="btn-pill">Create & Add</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Create New Custom Playlist -->
+  <div class="modal-overlay hidden" id="createPlaylistModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Create Custom Playlist</h3>
+        <button id="btnCloseCreatePlaylist" class="modal-close-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        <label class="modal-label">Playlist Name</label>
+        <input type="text" id="newPlaylistNameInput" class="modal-input" placeholder="e.g. Late Night Drives, Workout Bangers" autofocus>
+        <div class="modal-actions">
+          <button id="btnCancelCreatePlaylist" class="btn-ghost">Cancel</button>
+          <button id="btnConfirmCreatePlaylist" class="btn-accent">Create Playlist</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Save Queue as Custom Playlist -->
+  <div class="modal-overlay hidden" id="saveQueueModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <h3>Save Queue as Playlist</h3>
+          <p class="modal-sub" id="saveQueueModalSubtitle">Save current queue tracks to a new playlist</p>
+        </div>
+        <button id="btnCloseSaveQueueModal" class="modal-close-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        <label class="modal-label">Playlist Name</label>
+        <input type="text" id="saveQueueNameInput" class="modal-input" placeholder="e.g. Late Night Queue Mix" autofocus>
+        <div class="modal-actions">
+          <button id="btnCancelSaveQueueModal" class="btn-ghost">Cancel</button>
+          <button id="btnConfirmSaveQueueModal" class="btn-accent">Save Playlist</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Confirm Delete Playlist -->
+  <div class="modal-overlay hidden" id="confirmDeleteModal">
+    <div class="modal-card modal-card-sm">
+      <div class="modal-header">
+        <h3>Delete Playlist</h3>
+        <button id="btnCloseDeleteModal" class="modal-close-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-sub" id="confirmDeleteMessage">Are you sure you want to delete this playlist? This action cannot be undone.</p>
+        <div class="modal-actions">
+          <button id="btnCancelDeleteModal" class="btn-ghost">Cancel</button>
+          <button id="btnConfirmDeleteModal" class="btn-accent btn-danger">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Equalizer & Sound FX -->
+  <div class="modal-overlay hidden" id="eqModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Sound FX & Equalizer</h3>
+        <button id="btnCloseEq" class="modal-close-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="eq-presets">
+          <button class="eq-preset-btn active" data-preset="flat">Flat</button>
+          <button class="eq-preset-btn" data-preset="bass">Bass Boost 🔥</button>
+          <button class="eq-preset-btn" data-preset="vocal">Vocal Clear 🎙️</button>
+          <button class="eq-preset-btn" data-preset="electronic">Cyber Rave ⚡</button>
+        </div>
+        <div class="eq-sliders">
+          <div class="eq-band">
+            <span class="eq-label">Bass (100Hz)</span>
+            <input type="range" id="eqBass" min="-12" max="15" value="0" step="1">
+            <span id="eqBassVal" class="eq-val">0 dB</span>
+          </div>
+          <div class="eq-band">
+            <span class="eq-label">Mids (1kHz)</span>
+            <input type="range" id="eqMid" min="-12" max="12" value="0" step="1">
+            <span id="eqMidVal" class="eq-val">0 dB</span>
+          </div>
+          <div class="eq-band">
+            <span class="eq-label">Treble (8kHz)</span>
+            <input type="range" id="eqTreble" min="-12" max="15" value="0" step="1">
+            <span id="eqTrebleVal" class="eq-val">0 dB</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Queue Item Context Menu -->
+  <div class="queue-context-menu hidden" id="queueContextMenu">
+    <button class="ctx-menu-item" id="ctxPlayNow">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
+      Play Now
+    </button>
+    <button class="ctx-menu-item" id="ctxPlayNext">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
+      Play Next
+    </button>
+    <button class="ctx-menu-item" id="ctxMoveToTop">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"></path></svg>
+      Move to Top
+    </button>
+    <div class="ctx-menu-divider"></div>
+    <button class="ctx-menu-item" id="ctxAddToPlaylist">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+      Add to Playlist
+    </button>
+    <div class="ctx-menu-divider"></div>
+    <button class="ctx-menu-item ctx-danger" id="ctxRemoveFromQueue">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14H6L5 6"></path></svg>
+      Remove from Queue
+    </button>
+  </div>
+
+  <!-- Hidden Native Audio Engine -->
+  <audio id="nativeAudio" crossorigin="anonymous" preload="auto"></audio>
+
+  <!-- Scripts -->
+  <script src="/static/visualizer.js"></script>
+  <script src="/static/lyrics.js"></script>
+  <script src="/static/app.js?v=7"></script>
+</body>
+</html>

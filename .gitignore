@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+.env
+
+# Vercel
+.vercel
+
+# Operating System & IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
